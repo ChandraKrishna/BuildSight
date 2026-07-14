@@ -1,0 +1,13 @@
+.settings-copy {
+  color: #b7c5e4;
+  line-height: 1.65;
+}
+
+.settings-copy code {
+  color: #ff8dca;
+}
+
+.form-panel hr {
+  border-color: rgba(174, 198, 255, .25);
+  opacity: 1;
+}

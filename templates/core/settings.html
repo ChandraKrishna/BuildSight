@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block page_title %}Settings{% endblock %}{% block content %}<section
+    class="glass-panel form-panel"><span class="eyebrow">SYSTEM</span>
+    <h2>Application settings</h2>
+    <p class="settings-copy mt-3">Credentials are encrypted before storage. Set <code>DJANGO_SECRET_KEY</code> and
+        optionally <code>CREDENTIAL_ENCRYPTION_KEY</code> through your deployment environment before production use.</p>
+    <hr>
+    <h5>Access control</h5>
+    <p class="settings-copy">Django accounts provide authentication. Use the Django admin to create users and assign staff
+        status for administrative operations.</p>
+</section>{% endblock %}

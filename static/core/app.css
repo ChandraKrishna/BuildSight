@@ -1,0 +1,385 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+    --bg: #0a1021;
+    --panel: rgba(20, 31, 58, .68);
+    --line: rgba(174, 198, 255, .13);
+    --text: #f3f6ff;
+    --muted: #9ba9c7;
+    --blue: #7096ff;
+    --purple: #a579ff
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle at 75% 0, #253c83 0, transparent 32%), radial-gradient(circle at 10% 100%, #25205e 0, transparent 27%), var(--bg);
+    color: var(--text);
+    font: 14px 'DM Sans', sans-serif;
+    min-height: 100vh
+}
+
+.app-shell {
+    display: flex;
+    min-height: 100vh
+}
+
+.sidebar {
+    width: 252px;
+    padding: 28px 16px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--line);
+    background: rgba(8, 14, 31, .55);
+    backdrop-filter: blur(20px)
+}
+
+.brand {
+    color: #fff;
+    text-decoration: none;
+    font: 600 21px 'Space Grotesk';
+    display: flex;
+    gap: 10px;
+    align-items: center
+}
+
+.brand i {
+    color: #91adff
+}
+
+.side-label,
+.eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #8291b7;
+    font-weight: 700
+}
+
+.side-label {
+    margin: 44px 12px 12px
+}
+
+nav a,
+.sidebar-bottom a {
+    display: block;
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: #aeb9d5;
+    text-decoration: none;
+    margin: 3px 0
+}
+
+nav a:hover,
+.sidebar-bottom a:hover {
+    background: rgba(126, 154, 255, .14);
+    color: #fff
+}
+
+nav i,
+.sidebar-bottom i {
+    width: 24px
+}
+
+.sidebar-bottom {
+    margin-top: auto
+}
+
+main {
+    padding: 35px 48px;
+    width: calc(100% - 252px);
+    max-width: 1500px
+}
+
+.topbar,
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center
+}
+
+.topbar {
+    margin-bottom: 34px
+}
+
+.topbar h1,
+h2 {
+    font: 600 28px 'Space Grotesk';
+    margin: 4px 0
+}
+
+.section-heading h2 {
+    font-size: 21px
+}
+
+.user-chip {
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--line);
+    padding: 9px 14px;
+    border-radius: 50px;
+    color: #dbe3ff
+}
+
+.glass-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .2);
+    backdrop-filter: blur(18px);
+    padding: 24px
+}
+
+.filters {
+    padding: 18px 22px
+}
+
+.form-label,
+.filters label {
+    font-size: 12px;
+    color: #bbc7e4;
+    margin-bottom: 6px
+}
+
+.form-control,
+.form-select {
+    background: rgba(4, 10, 26, .45) !important;
+    border: 1px solid var(--line) !important;
+    color: #edf2ff !important;
+    border-radius: 9px;
+    padding: .65rem .75rem
+}
+
+.form-select option {
+    background: #111b35
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 .2rem rgba(112, 150, 255, .2)
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px
+}
+
+.metric {
+    min-height: 125px;
+    border-radius: 16px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: rgba(30, 43, 75, .62)
+}
+
+.metric:after {
+    content: '';
+    position: absolute;
+    width: 95px;
+    height: 95px;
+    border-radius: 50%;
+    right: -28px;
+    bottom: -36px;
+    background: currentColor;
+    opacity: .13
+}
+
+.metric span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #afbbda
+}
+
+.metric strong {
+    display: block;
+    font: 600 34px 'Space Grotesk';
+    margin-top: 10px
+}
+
+.metric i {
+    position: absolute;
+    right: 17px;
+    top: 18px;
+    font-size: 20px
+}
+
+.success {
+    color: #55d9a5
+}
+
+.danger {
+    color: #ff7e99
+}
+
+.warning {
+    color: #ffc66d
+}
+
+.running {
+    color: #8baeff
+}
+
+.featured {
+    color: #b89bff
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #e9eeff;
+    --bs-table-border-color: var(--line);
+    margin: 0
+}
+
+.table th {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #8998bc;
+    font-weight: 700
+}
+
+.table td small {
+    display: block;
+    color: #8e9bbb;
+    margin-top: 2px
+}
+
+.status {
+    font-size: 11px;
+    padding: 5px 9px;
+    border-radius: 20px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, .09)
+}
+
+.status.success {
+    color: #63dcad
+}
+
+.status.failure {
+    color: #ff8ca2
+}
+
+.status.unstable {
+    color: #ffcf7b
+}
+
+.status.running {
+    color: #9db8ff
+}
+
+.status.aborted {
+    color: #b4bdd1
+}
+
+.empty {
+    text-align: center;
+    padding: 38px !important;
+    color: #9aa8c8
+}
+
+.btn {
+    border-radius: 9px;
+    font-weight: 600
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #668aff, #9a73ff);
+    border: 0
+}
+
+.btn-outline-light {
+    border-color: var(--line);
+    color: #dce5ff
+}
+
+.form-panel {
+    max-width: 680px
+}
+
+.form-panel small {
+    color: #94a2c6
+}
+
+.glass-alert {
+    border: 1px solid var(--line);
+    background: rgba(28, 43, 74, .8);
+    color: #fff
+}
+
+.login-page {
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 20% 20%, #263e88, transparent 30%), var(--bg)
+}
+
+.login-card {
+    width: min(430px, 92vw);
+    padding: 42px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: 0 30px 80px #020714
+}
+
+.login-card h1 {
+    font: 600 29px 'Space Grotesk';
+    margin: 8px 0
+}
+
+.login-card p {
+    color: var(--muted);
+    margin-bottom: 28px
+}
+
+@media(max-width:900px) {
+    .sidebar {
+        width: 70px;
+        padding: 25px 10px
+    }
+
+    .sidebar .brand span,
+    .sidebar a:not(.brand),
+    .side-label {
+        font-size: 0
+    }
+
+    .sidebar a i {
+        font-size: 18px
+    }
+
+    .sidebar-bottom a {
+        padding: 12px;
+        text-align: center
+    }
+
+    main {
+        width: calc(100% - 70px);
+        padding: 25px
+    }
+
+    .metrics {
+        grid-template-columns: repeat(2, 1fr)
+    }
+}
+
+@media(max-width:600px) {
+    main {
+        padding: 18px
+    }
+
+    .metrics {
+        grid-template-columns: 1fr 1fr
+    }
+
+    .topbar h1 {
+        font-size: 22px
+    }
+
+    .user-chip {
+        display: none
+    }
+}
