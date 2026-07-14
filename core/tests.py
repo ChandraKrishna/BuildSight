@@ -38,6 +38,8 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'class="form-control"', count=2)
 
     def test_mapping_form_displays_the_saved_jenkins_server_url(self):
+        self.user.is_superuser = True
+        self.user.save()
         self.client.login(username='operator', password='safe-password')
         response = self.client.get(reverse('mapping_new'))
         self.assertContains(response, 'Jenkins server (actual URL)')
@@ -87,6 +89,7 @@ class DashboardTests(TestCase):
 
     def test_staff_can_export_and_restore_project_data(self):
         self.user.is_staff = True
+        self.user.is_superuser = True
         self.user.save()
         self.client.login(username='operator', password='safe-password')
         backup = self.client.get(reverse('database_backup'))
@@ -107,6 +110,7 @@ class DashboardTests(TestCase):
 
     def test_staff_can_configure_dashboard_and_report_default_ranges(self):
         self.user.is_staff = True
+        self.user.is_superuser = True
         self.user.save()
         self.client.login(username='operator', password='safe-password')
         response = self.client.post(reverse('display_preferences'), {'dashboard_default_days': 7, 'report_default_days': 14})
@@ -114,6 +118,25 @@ class DashboardTests(TestCase):
         preference = DisplayPreference.get_solo()
         self.assertEqual(preference.dashboard_default_days, 7)
         self.assertEqual(preference.report_default_days, 14)
+
+    def test_staff_user_is_read_only_in_the_application(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.login(username='operator', password='safe-password')
+        listing = self.client.get(reverse('jenkins_list'))
+        self.assertNotContains(listing, 'Add jenkins')
+        response = self.client.get(reverse('jenkins_new'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_superuser_can_create_a_read_only_staff_user(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.login(username='operator', password='safe-password')
+        response = self.client.post(reverse('create_managed_user'), {'username': 'viewer', 'email': 'viewer@example.test', 'role': 'readonly', 'password1': 'A-safe-password-123', 'password2': 'A-safe-password-123'})
+        self.assertRedirects(response, reverse('settings'))
+        viewer = User.objects.get(username='viewer')
+        self.assertTrue(viewer.is_staff)
+        self.assertFalse(viewer.is_superuser)
 
     def test_reports_apply_its_own_configured_default_range(self):
         preference = DisplayPreference.get_solo()

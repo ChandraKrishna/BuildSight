@@ -1,4 +1,7 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.db import models
 from .models import DisplayPreference, GitHubRepository, JenkinsServer, ProjectMapping
 
 class GlassForm(forms.ModelForm):
@@ -60,3 +63,28 @@ class DisplayPreferenceForm(forms.ModelForm):
             if cleaned.get(name) is not None and not 1 <= cleaned[name] <= 365:
                 self.add_error(name, 'Enter a value from 1 to 365 days.')
         return cleaned
+
+class ManagedUserCreationForm(UserCreationForm):
+    class Role(models.TextChoices):
+        READ_ONLY = 'readonly', 'Read-only staff'
+        ADMIN = 'admin', 'Administrator'
+
+    email = forms.EmailField(required=False)
+    role = forms.ChoiceField(choices=Role.choices, initial=Role.READ_ONLY, label='Access role')
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username', 'email')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-select' if field is self.fields['role'] else 'form-control'
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.is_staff = True
+        user.is_superuser = self.cleaned_data['role'] == self.Role.ADMIN
+        if commit: user.save()
+        return user
