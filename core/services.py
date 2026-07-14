@@ -7,8 +7,9 @@ import requests
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from .models import AuditLog, Build
-from .repositories import DashboardRepository
+from .repositories import DashboardRepository, SettingsRepository
 
 def _fernet():
     source = settings.CREDENTIAL_ENCRYPTION_KEY or settings.SECRET_KEY
@@ -78,23 +79,45 @@ class GitHubService:
 
 class DashboardService:
     @staticmethod
-    def build_filters(params, default_to_last_three_days=False):
+    def constrained_date_params(params, default_days):
+        """Keep all dashboard/report date selections within the configured window."""
+        normalized = params.copy()
+        today = timezone.localdate()
+        earliest = today - timedelta(days=default_days - 1)
+
+        def constrain(raw, fallback):
+            if not raw: return fallback
+            value = parse_date(raw)
+            if not value: return fallback
+            return min(max(value, earliest), today)
+
+        start = constrain(params.get('start'), earliest)
+        end = constrain(params.get('end'), None) if params.get('end') else None
+        if end and end < start: end = start
+        normalized['start'] = start.isoformat()
+        normalized['end'] = end.isoformat() if end else ''
+        return normalized, earliest, today
+
+    @staticmethod
+    def build_filters(params):
         filters = {}
         if params.get('project'): filters['mapping_id'] = params['project']
         if params.get('branch'): filters['mapping__branch'] = params['branch']
         if params.get('start'): filters['started_at__date__gte'] = params['start']
         if params.get('end'): filters['started_at__date__lte'] = params['end']
-        if default_to_last_three_days and not params.get('start') and not params.get('end'):
-            filters['started_at__date__gte'] = timezone.localdate() - timedelta(days=2)
         return filters
 
     @staticmethod
     def overview(params):
-        filters = DashboardService.build_filters(params, default_to_last_three_days=True)
+        preference = SettingsRepository.display_preference()
+        normalized, earliest, today = DashboardService.constrained_date_params(params, preference.dashboard_default_days)
+        filters = DashboardService.build_filters(normalized)
         counts = {item['status']: item['total'] for item in DashboardRepository.status_counts(filters)}
-        return {'builds': DashboardRepository.builds(filters), 'mappings': DashboardRepository.mappings(), 'counts': counts, 'total_projects': DashboardRepository.mappings().count(), 'filters': params, 'default_start': timezone.localdate() - timedelta(days=2)}
+        return {'builds': DashboardRepository.builds(filters), 'mappings': DashboardRepository.mappings(), 'counts': counts, 'total_projects': DashboardRepository.mappings().count(), 'filters': normalized, 'selected_start': normalized['start'], 'min_date': earliest.isoformat(), 'max_date': today.isoformat(), 'default_days': preference.dashboard_default_days}
 
     @staticmethod
     def report(params):
-        filters = DashboardService.build_filters(params, default_to_last_three_days=True)
-        return {'builds': DashboardRepository.builds(filters), 'mappings': DashboardRepository.mappings(), 'filters': params, 'default_start': timezone.localdate() - timedelta(days=2)}
+        preference = SettingsRepository.display_preference()
+        normalized, earliest, today = DashboardService.constrained_date_params(params, preference.report_default_days)
+        filters = DashboardService.build_filters(normalized)
+        return {'builds': DashboardRepository.builds(filters), 'mappings': DashboardRepository.mappings(), 'filters': normalized, 'selected_start': normalized['start'], 'min_date': earliest.isoformat(), 'max_date': today.isoformat(), 'default_days': preference.report_default_days}

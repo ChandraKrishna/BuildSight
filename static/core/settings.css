@@ -11,3 +11,7 @@
   border-color: rgba(174, 198, 255, .25);
   opacity: 1;
 }
+
+.pagination-summary {
+  color: #aebcdb;
+}

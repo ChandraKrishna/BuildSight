@@ -1,13 +1,18 @@
 import csv
+import json
+import os
+import tempfile
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpResponse
 from django.core.paginator import Paginator
+from django.core.management import call_command
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
-from .forms import GitHubRepositoryForm, JenkinsServerForm, ProjectMappingForm
-from .models import Build, GitHubRepository, JenkinsServer, ProjectMapping
+from .forms import DatabaseRestoreForm, DisplayPreferenceForm, GitHubRepositoryForm, JenkinsServerForm, ProjectMappingForm
+from .models import AuditLog, Build, DisplayPreference, GitHubRepository, JenkinsServer, ProjectMapping
 from .repositories import ConfigurationRepository
 from .services import DashboardService, GitHubService, JenkinsService, audit, encrypt
 
@@ -28,7 +33,7 @@ def paginate_builds(context, request):
     page = Paginator(context['builds'], 50).get_page(request.GET.get('page'))
     query = request.GET.copy()
     query.pop('page', None)
-    context.update({'builds': page, 'page_obj': page, 'pagination_query': query.urlencode()})
+    context.update({'builds': page, 'page_obj': page, 'page_numbers': page.paginator.get_elided_page_range(number=page.number, on_each_side=2, on_ends=1), 'pagination_query': query.urlencode()})
     return context
 
 @login_required
@@ -88,4 +93,62 @@ def reports(request):
     return render(request, 'core/reports.html', paginate_builds(context, request))
 
 @login_required
-def settings_view(request): return render(request, 'core/settings.html')
+def settings_view(request): return render(request, 'core/settings.html', {'restore_form': DatabaseRestoreForm(), 'display_form': DisplayPreferenceForm(instance=DisplayPreference.get_solo()), 'is_admin': request.user.is_staff})
+
+def staff_required(view):
+    return login_required(user_passes_test(lambda user: user.is_staff)(view))
+
+@staff_required
+def database_backup(request):
+    response = HttpResponse(content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename="buildsight-backup.json"'
+    call_command('dumpdata', 'core.displaypreference', 'core.jenkinsserver', 'core.githubrepository', 'core.projectmapping', 'core.build', indent=2, stdout=response)
+    audit(request.user, 'exported_database_backup', 'project data')
+    return response
+
+@staff_required
+def database_restore(request):
+    if request.method != 'POST': return redirect('settings')
+    form = DatabaseRestoreForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return render(request, 'core/settings.html', {'restore_form': form, 'is_admin': True})
+    uploaded = form.cleaned_data['backup_file']
+    if uploaded.size > 20 * 1024 * 1024:
+        form.add_error('backup_file', 'Backup files must be 20 MB or smaller.')
+        return render(request, 'core/settings.html', {'restore_form': form, 'is_admin': True})
+    raw = uploaded.read()
+    try: json.loads(raw.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        form.add_error('backup_file', 'Upload a valid BuildSight JSON backup file.')
+        return render(request, 'core/settings.html', {'restore_form': form, 'is_admin': True})
+    temporary_file = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.json', delete=False) as temporary_file:
+            temporary_file.write(raw)
+        with transaction.atomic():
+            AuditLog.objects.all().delete()
+            Build.objects.all().delete()
+            ProjectMapping.objects.all().delete()
+            GitHubRepository.objects.all().delete()
+            JenkinsServer.objects.all().delete()
+            DisplayPreference.objects.all().delete()
+            call_command('loaddata', temporary_file.name, verbosity=0)
+        audit(request.user, 'restored_database_backup', uploaded.name)
+        messages.success(request, 'Project data restored successfully.')
+        return redirect('settings')
+    except Exception as exc:
+        form.add_error('backup_file', f'Restore failed: {exc}')
+        return render(request, 'core/settings.html', {'restore_form': form, 'is_admin': True})
+    finally:
+        if temporary_file and os.path.exists(temporary_file.name): os.unlink(temporary_file.name)
+
+@staff_required
+def update_display_preferences(request):
+    if request.method != 'POST': return redirect('settings')
+    form = DisplayPreferenceForm(request.POST, instance=DisplayPreference.get_solo())
+    if form.is_valid():
+        form.save()
+        audit(request.user, 'updated_display_preferences', 'dashboard and reports')
+        messages.success(request, 'Default date ranges updated.')
+        return redirect('settings')
+    return render(request, 'core/settings.html', {'restore_form': DatabaseRestoreForm(), 'display_form': form, 'is_admin': True})

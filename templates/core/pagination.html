@@ -1,11 +1,12 @@
-{% if page_obj.paginator.num_pages > 1 %}
-<nav class="d-flex justify-content-center mt-4" aria-label="Build pages">
-  <div class="btn-group" role="group">
+{% if page_obj.paginator.count %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4">
+  <small class="pagination-summary">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} builds · 50 per page</small>
+  {% if page_obj.paginator.num_pages > 1 %}<nav aria-label="Build pages"><div class="btn-group" role="group">
     {% if page_obj.has_previous %}<a class="btn btn-outline-light" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
-    {% for page_number in page_obj.paginator.page_range %}
-      {% if page_number == page_obj.number %}<span class="btn btn-primary">{{ page_number }}</span>{% else %}<a class="btn btn-outline-light" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
+    {% for page_number in page_numbers %}
+      {% if page_number == '…' %}<span class="btn btn-outline-light disabled">…</span>{% elif page_number == page_obj.number %}<span class="btn btn-primary">{{ page_number }}</span>{% else %}<a class="btn btn-outline-light" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
     {% endfor %}
     {% if page_obj.has_next %}<a class="btn btn-outline-light" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
-  </div>
-</nav>
+  </div></nav>{% endif %}
+</div>
 {% endif %}

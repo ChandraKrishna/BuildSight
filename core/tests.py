@@ -1,10 +1,11 @@
 from django.contrib.auth.models import User
 from datetime import timedelta
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from unittest.mock import Mock, patch
-from .models import Build, GitHubRepository, JenkinsServer, ProjectMapping
+from .models import Build, DisplayPreference, GitHubRepository, JenkinsServer, ProjectMapping
 from .services import JenkinsService, decrypt, encrypt
 
 class DashboardTests(TestCase):
@@ -55,7 +56,10 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse('reports'))
         self.assertContains(response, '#12')
         self.assertNotContains(response, '#11')
-        response = self.client.get(reverse('reports'), {'start': (timezone.localdate() - timedelta(days=5)).isoformat()})
+        preference = DisplayPreference.get_solo()
+        preference.report_default_days = 5
+        preference.save()
+        response = self.client.get(reverse('reports'), {'start': (timezone.localdate() - timedelta(days=4)).isoformat()})
         self.assertContains(response, '#11')
 
     def test_dashboard_and_report_paginate_fifty_builds_per_page(self):
@@ -69,6 +73,8 @@ class DashboardTests(TestCase):
         self.assertContains(report, '#12')
         self.assertContains(dashboard, 'page=1')
         self.assertContains(report, 'page=1')
+        self.assertContains(dashboard, '50 per page')
+        self.assertContains(report, '50 per page')
 
     def test_report_shows_diagnostics_for_unsuccessful_builds(self):
         mapping = ProjectMapping.objects.get(name='Dashboard CI')
@@ -78,6 +84,64 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Drill down')
         self.assertContains(response, 'Krishna')
         self.assertContains(response, 'ERROR: Test step failed')
+
+    def test_staff_can_export_and_restore_project_data(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.login(username='operator', password='safe-password')
+        backup = self.client.get(reverse('database_backup'))
+        self.assertEqual(backup.status_code, 200)
+        self.assertIn(b'core.jenkinsserver', backup.content)
+        Build.objects.all().delete()
+        ProjectMapping.objects.all().delete()
+        GitHubRepository.objects.all().delete()
+        JenkinsServer.objects.all().delete()
+        restored = self.client.post(reverse('database_restore'), {'backup_file': SimpleUploadedFile('buildsight-backup.json', backup.content, content_type='application/json'), 'confirm_replace': 'on'})
+        self.assertRedirects(restored, reverse('settings'))
+        self.assertTrue(ProjectMapping.objects.filter(name='Dashboard CI').exists())
+
+    def test_non_staff_cannot_export_database_data(self):
+        self.client.login(username='operator', password='safe-password')
+        response = self.client.get(reverse('database_backup'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_staff_can_configure_dashboard_and_report_default_ranges(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.login(username='operator', password='safe-password')
+        response = self.client.post(reverse('display_preferences'), {'dashboard_default_days': 7, 'report_default_days': 14})
+        self.assertRedirects(response, reverse('settings'))
+        preference = DisplayPreference.get_solo()
+        self.assertEqual(preference.dashboard_default_days, 7)
+        self.assertEqual(preference.report_default_days, 14)
+
+    def test_reports_apply_its_own_configured_default_range(self):
+        preference = DisplayPreference.get_solo()
+        preference.dashboard_default_days = 1
+        preference.report_default_days = 5
+        preference.save()
+        mapping = ProjectMapping.objects.get(name='Dashboard CI')
+        Build.objects.create(mapping=mapping, build_number=20, status=Build.Status.SUCCESS, started_at=timezone.now() - timedelta(days=4))
+        self.client.login(username='operator', password='safe-password')
+        dashboard = self.client.get(reverse('dashboard'))
+        report = self.client.get(reverse('reports'))
+        self.assertNotContains(dashboard, '#20</td>')
+        self.assertContains(report, '#20')
+        self.assertContains(report, 'DEFAULT: LAST 5 DAYS')
+
+    def test_date_filters_are_limited_to_the_configured_day_window(self):
+        preference = DisplayPreference.get_solo()
+        preference.dashboard_default_days = 3
+        preference.report_default_days = 3
+        preference.save()
+        self.client.login(username='operator', password='safe-password')
+        too_old = (timezone.localdate() - timedelta(days=30)).isoformat()
+        allowed_start = (timezone.localdate() - timedelta(days=2)).isoformat()
+        dashboard = self.client.get(reverse('dashboard'), {'start': too_old})
+        report = self.client.get(reverse('reports'), {'start': too_old})
+        self.assertContains(dashboard, f'value="{allowed_start}"')
+        self.assertContains(report, f'value="{allowed_start}"')
+        self.assertContains(report, f'min="{allowed_start}"')
 
     @patch('core.services.requests.get')
     def test_github_validation_removes_clone_suffix(self, get):

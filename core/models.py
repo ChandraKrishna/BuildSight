@@ -56,3 +56,13 @@ class AuditLog(models.Model):
     details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     class Meta: ordering = ['-created_at']
+
+class DisplayPreference(models.Model):
+    dashboard_default_days = models.PositiveSmallIntegerField(default=3)
+    report_default_days = models.PositiveSmallIntegerField(default=3)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def get_solo(cls):
+        preference, _ = cls.objects.get_or_create(pk=1)
+        return preference

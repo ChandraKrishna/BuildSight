@@ -1,6 +1,6 @@
 """Persistence boundary: services use these helpers, never views."""
 from django.db.models import Count
-from .models import Build, GitHubRepository, JenkinsServer, ProjectMapping
+from .models import Build, DisplayPreference, GitHubRepository, JenkinsServer, ProjectMapping
 
 class DashboardRepository:
     @staticmethod
@@ -13,3 +13,6 @@ class DashboardRepository:
 class ConfigurationRepository:
     servers = staticmethod(lambda: JenkinsServer.objects.all())
     repositories = staticmethod(lambda: GitHubRepository.objects.all())
+
+class SettingsRepository:
+    display_preference = staticmethod(DisplayPreference.get_solo)
