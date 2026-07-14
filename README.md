@@ -184,7 +184,9 @@ Replace SQLite with PostgreSQL for production deployments.
 
 ## 📄 License
 
-MIT License.
+Source-available under the [BuildSight Source-Available No-Modifications License](LICENSE).
+Use, copying, and sharing of complete unmodified copies is allowed; modifications
+and derivative works are not permitted.
 
 ------------------------------------------------------------------------
 
