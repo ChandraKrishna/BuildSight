@@ -36,6 +36,12 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse('login'))
         self.assertContains(response, 'class="form-control"', count=2)
 
+    def test_mapping_form_displays_the_saved_jenkins_server_url(self):
+        self.client.login(username='operator', password='safe-password')
+        response = self.client.get(reverse('mapping_new'))
+        self.assertContains(response, 'Jenkins server (actual URL)')
+        self.assertContains(response, 'CI — https://ci.example.test')
+
     def test_sign_out_redirects_to_login(self):
         self.client.login(username='operator', password='safe-password')
         response = self.client.post(reverse('logout'))
