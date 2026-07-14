@@ -26,7 +26,7 @@ class JenkinsService:
         response = self._request('api/json'); response.raise_for_status(); return True
     def sync(self, mapping):
         job_path = self._job_path(mapping.job_name)
-        response = self._request(f'{job_path}/api/json?tree=builds[number,result,timestamp,duration,building,url]')
+        response = self._request(f'{job_path}/api/json?tree=builds[number,result,timestamp,duration,building,url,actions[causes[shortDescription,userId,userName]]]')
         if response.status_code == 404:
             raise ValueError(f'Jenkins could not find or authorize the job "{mapping.job_name}". Use the exact job path (for example, folder-name/job-name) and confirm the configured Jenkins user or API token has Job/Read permission.')
         response.raise_for_status()
@@ -34,7 +34,28 @@ class JenkinsService:
             status = 'RUNNING' if item.get('building') else (item.get('result') or 'ABORTED')
             if status not in Build.Status.values: status = 'ABORTED'
             started = datetime.fromtimestamp(item.get('timestamp', 0) / 1000, tz=dt_timezone.utc) if item.get('timestamp') else None
-            Build.objects.update_or_create(mapping=mapping, build_number=item['number'], defaults={'status': status, 'started_at': started, 'duration_seconds': int(item.get('duration', 0) / 1000), 'completed_at': None, 'url': item.get('url', '')})
+            initiated_by = self._build_initiator(item)
+            trace = self._console_trace(job_path, item['number']) if status != Build.Status.SUCCESS else ''
+            Build.objects.update_or_create(mapping=mapping, build_number=item['number'], defaults={'status': status, 'started_at': started, 'duration_seconds': int(item.get('duration', 0) / 1000), 'completed_at': None, 'url': item.get('url', ''), 'failure_trace': trace, 'initiated_by': initiated_by})
+
+    def _console_trace(self, job_path, build_number):
+        try:
+            response = self._request(f'{job_path}/{build_number}/consoleText')
+            response.raise_for_status()
+            return response.text[-12000:]
+        except requests.RequestException:
+            return 'Jenkins console output was unavailable for this build.'
+
+    @staticmethod
+    def _build_initiator(build):
+        for action in build.get('actions') or []:
+            for cause in action.get('causes') or []:
+                actor = cause.get('userName') or cause.get('userId')
+                if actor:
+                    return actor
+                if cause.get('shortDescription'):
+                    return cause['shortDescription']
+        return ''
 
     @staticmethod
     def _job_path(job_name):

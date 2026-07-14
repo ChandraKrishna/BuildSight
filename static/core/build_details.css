@@ -1,0 +1,7 @@
+.build-modal { background: #111c38; color: #edf2ff; border: 1px solid rgba(174, 198, 255, .2); }
+.build-modal .modal-header, .build-modal .modal-footer { border-color: rgba(174, 198, 255, .15); }
+.diagnostic-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+.diagnostic-grid div { padding: 12px; border-radius: 10px; background: rgba(4, 10, 26, .35); }
+.diagnostic-grid span { display: block; margin-bottom: 7px; color: #94a2c6; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+.diagnostic-grid strong { color: #eef3ff; }
+.build-trace { max-height: 360px; padding: 15px; border-radius: 10px; background: #070d1c; color: #d3def8; font: 12px/1.55 Consolas, monospace; white-space: pre-wrap; word-break: break-word; }

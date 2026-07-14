@@ -43,6 +43,8 @@ class Build(TimestampedModel):
     completed_at = models.DateTimeField(null=True, blank=True)
     duration_seconds = models.PositiveIntegerField(default=0)
     url = models.URLField(blank=True)
+    failure_trace = models.TextField(blank=True)
+    initiated_by = models.CharField(max_length=255, blank=True)
     class Meta:
         ordering = ['-started_at', '-build_number']
         constraints = [models.UniqueConstraint(fields=['mapping', 'build_number'], name='unique_mapping_build')]

@@ -70,6 +70,15 @@ class DashboardTests(TestCase):
         self.assertContains(dashboard, 'page=1')
         self.assertContains(report, 'page=1')
 
+    def test_report_shows_diagnostics_for_unsuccessful_builds(self):
+        mapping = ProjectMapping.objects.get(name='Dashboard CI')
+        Build.objects.create(mapping=mapping, build_number=99, status=Build.Status.FAILURE, started_at=timezone.now(), initiated_by='Krishna', failure_trace='ERROR: Test step failed')
+        self.client.login(username='operator', password='safe-password')
+        response = self.client.get(reverse('reports'))
+        self.assertContains(response, 'Drill down')
+        self.assertContains(response, 'Krishna')
+        self.assertContains(response, 'ERROR: Test step failed')
+
     @patch('core.services.requests.get')
     def test_github_validation_removes_clone_suffix(self, get):
         get.return_value = Mock(raise_for_status=Mock())
